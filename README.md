@@ -1,9 +1,9 @@
-# Usage guide
+## Introduction
 
 This repository was created as part of my Master thesis: Transfer learning of interatomic potentials: from molecules to crystals. 
 
 The aim was to use ANI2x model and apply it to crystals as a part of the Seventh CCDC Blind Test of Crystal
-Structure Prediction Methods.  
+Structure Prediction Methods. Structured can be found here: https://www.ccdc.cam.ac.uk/Community/initiatives/cspblindtests/7-csp-blind-test-targets/ . 
 
 ## HARDWER REQUIREMENTS
 
@@ -51,9 +51,9 @@ python3 test.py -n num
 
 ## Utils
 
-# Change model device to cpu
+### Change model device to cpu
 
-python3 utils/model2cpu.py -n num
+python3 model2cpu.py -n num
 
 
 
