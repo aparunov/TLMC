@@ -3,7 +3,7 @@
 This repository was created as part of my Master thesis: Transfer learning of interatomic potentials: from molecules to crystals. 
 
 The aim was to use ANI2x model and apply it to crystals as a part of the Seventh CCDC Blind Test of Crystal
-Structure Prediction Methods. Structured can be found here: https://www.ccdc.cam.ac.uk/Community/initiatives/cspblindtests/7-csp-blind-test-targets/ . 
+Structure Prediction Methods. Structures can be found here: https://www.ccdc.cam.ac.uk/Community/initiatives/cspblindtests/7-csp-blind-test-targets/ . 
 
 ## HARDWER REQUIREMENTS
 
@@ -17,7 +17,8 @@ docker run  --gpus all   -ti --ipc=host  -v /PATH/TO/FOLDER:/app nvidia/cuda:11.
 
 ### Install pip 
 
-apt update install python3-pip
+apt update 
+apt install python3-pip
 
 ### Install pytorch with CUDA support 
 
