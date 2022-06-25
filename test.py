@@ -3,165 +3,148 @@ from ase.io.trajectory import Trajectory
 from ase.io.trajectory import TrajectoryWriter
 import torchani
 from tqdm import tqdm
-import h5py
-#New DFT data
-dft = Trajectory('dft.traj', 'r')
 from collections import defaultdict
 from ase.units import Hartree
+import math
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
-#Old NN potential on huge data
 
-#Novi kalkulator
-calculator = torchani.models.ANI2x().ase()
-
-#Baseline kalkulator
-#calculator_baseline = torchani.models.ANI2x().ase()
-
-#dft energije
 dft_energies=[]
-#nove energije
 ani2x_energies=[]
-#baseine energije
 baseline_energies = []
 
 
 import torch
-#Učitavamo težine modela
-loaded_compiled_model = torch.jit.load('compiled_model_new-v2.pt')
+import pickle
 
-model = loaded_compiled_model
-calculator.model.neural_networks = model.to('cpu')
+import argparse# Create the parser
+parser = argparse.ArgumentParser()# Add an argument
+parser.add_argument('-n','--name', type=str, required=True, help='Model name')
+args = parser.parse_args()# Print "Hello" + the user input argument
+
+FILE_VAR = args.name
+
+with open('data/train_data_{}.pkl'.format(FILE_VAR), 'rb') as f:
+    training, validation = pickle.load(f)
+
+device = torch.device('cpu')
+
+#Učitavamo težine modela
+loaded_compiled_model = torch.jit.load('models/test_model_{}.pt'.format(FILE_VAR)).to(device)
+model = torchani.models.ANI2x().ase().model.to(device)
+baseline_model = torchani.models.ANI2x().ase().model.to(device)
+nn = loaded_compiled_model.to(device)
+
+model.neural_networks = nn
+energy_shifts = np.array([0,  0 , 0 , 0 ,  0 , 0,  0,0,0,0]) 
+energy_shifter = torchani.utils.EnergyShifter(energy_shifts/Hartree, True).to(device)
+model.energy_shifter = energy_shifter.to(device)
+baseline_model.energy_shifter = energy_shifter.to(device)
 
 #Definiramo shift
-shifts = np.array([-6.883758738459247,  -6.883758738459247 , -6.883758738459247 , -6.883758738459247 ,  -6.883758738459247 , -6.883758738459247,  -6.883758738459247])
-energy_shifter = torchani.utils.EnergyShifter(shifts/Hartree, fit_intercept = False)
-calculator.model.energy_shifter = energy_shifter
-#calculator_baseline.model.energy_shifter = energy_shifter
+shft = 4.75717  #+ 0.2379
 
-for i in tqdm(range(len(dft))):
-    #save new DFT energies to array
-    dft_energies.append(dft[i].get_potential_energy())
-    dft_energies[i]/=len(dft[i].get_atomic_numbers())
+mse = torch.nn.MSELoss(reduction='none')
+mse_sum = torch.nn.MSELoss(reduction='sum')
+total_mse = 0.0
+force_mse = 0.0
+total_mse_base = 0.0
+force_mse_base = 0.0  
+count = 0
+cnt = 0
+dct = defaultdict()
+dct2 = defaultdict()
+dct3 = defaultdict()
+dct4 = defaultdict()
+dct5 = defaultdict()
+dct6 = defaultdict()
 
-    #calculate energies with NN potential for the structures used with DFT
-    struktura = dft[i]
-    struktura.set_calculator(calculator)
-    ani2x_energies.append(struktura.get_potential_energy())
-    ani2x_energies[i]/=len(struktura.get_atomic_numbers())
-    #struktura.set_calculator(calculator_baseline)
-    #baseline_energies.append(struktura.get_potential_energy())
-    #baseline_energies[i]/=len(struktura.get_atomic_numbers())
-
-from matplotlib import pyplot as plt
-
-#compare predictions of NN potential to DFT data
-from scipy import stats
-
-#Linearna regresija za novi model
-res = stats.linregress(dft_energies[:], ani2x_energies[:])
-
-#Linearna regresija za baseline 
-#res1 = stats.linregress(dft_energies[:], baseline_energies[:])
-
-x = np.linspace(min(dft_energies), max(dft_energies))
-y = res.slope * x + res.intercept
-plt.figure(figsize=(12,12))
-
-#Plot novi model
-plt.scatter(dft_energies[:], ani2x_energies[:], c = 'red', s = 12, alpha=0.5)
-
-#Plot baseline 
-#plt.scatter(dft_energies[:], np.asarray(baseline_energies[:]), c = 'brown')
-#Plot novi fit
-plt.plot(x,y, label = 'fit_new', color = 'steelblue')
-#x = np.linspace(min(dft_energies), max(dft_energies))
-#y = res1.slope * x + res1.intercept
-
-#Plot baseline fit
-#plt.plot(x,y, label = 'fit_basesline', color = 'steelblue')
-print(res)
-
-plt.grid()
-#plt.legend()
-#plt.plot([-0.0005,0.0005],[-0.005,0.005])
-plt.xlim(-6.89, -6.88)
-plt.ylim(-6.89, -6.88)
-
-plt.savefig('energije_novo.jpeg')
-plt.show()
-
-
-#not accurate enough, transfer learning with new data
-
-#SILE - plot novih, usporedba sa starima samo za r_value linerane regresije
-
-
-#loaded_compiled_model = torch.jit.load('compiled_model.pt')
-#model = loaded_compiled_model
-#calculator.model.neural_networks = model
-#shifts = np.array([-2.35066639, -2.17385848, -4.42472954, -3.20551635, -1.11902447,  -5.05470390]) 
-#energy_shifter = torchani.utils.EnergyShifter(shifts/Hartree, fit_intercept=False)
-#calculator.model.energy_shifter = energy_shifter
-#calculator_baseline.model.energy_shifter = energy_shifter
-#energy_shifter = torchani.utils.EnergyShifter(torch.Tensor([-0.5978583943827134, -38.08933878049795, -54.711968298621066, -75.19106774742086,
-#-398.1577125334925, -99.80348506781634]))
-#calculator.model.energy_shifter = energy_shifter
-
-
-dft_forces = []
-ani2x_forces=[]
-#baseline_forces=[]
-
-
-
-for i in tqdm(range(len(dft))):
-    #save new DFT energies to array
-
-    #dftF = np.asarray(dft[i].get_forces()).reshape(3,-1)
-    dft_forces.append(dft[i].get_forces())
+for idx, properties in enumerate(tqdm(validation) ):
+        species = torch.unsqueeze(torch.as_tensor(properties['species']),0).to(device)
+        coordinates = properties['coordinates'].to(device).float().requires_grad_(True)
+        true_energies = properties['energies'].to(device).double()
+        
+        #true_energies /= Hartree
+        true_forces = properties['forces'].to(device).float()
     
-    #print(dft_energies[i])
-    #for atoms, shifts in asft:
-    #    dft_energies[i] -= np.count_nonzero(dft[i].get_atomic_numbers()==atoms)*shifts/27.2144
-    #dft_energies[i]/=len(dft[i].get_atomic_numbers())
-    #print(dft_energies[i])
+        cell = properties['cell'].to(device).float()
+        pbc = properties['pbc'].to(device)
+        #print(species)
+        num_atoms = (species >= 0).to(device).sum(dim=1, dtype=true_energies.dtype)
+        _, predicted_energies = model((species, coordinates), cell, pbc)
+        _, baseline_energies = baseline_model((species, coordinates), cell, pbc)
+        dct3[idx] = (predicted_energies.item() )/num_atoms.item()*Hartree
+        dct5[idx] = (baseline_energies.item() )/num_atoms.item()*Hartree
+        dct4[idx] = (true_energies.item()  + shft*num_atoms.item() )/num_atoms.item()
+        baseline_forces = -torch.autograd.grad(baseline_energies.sum(), coordinates, create_graph=True, retain_graph=True)[0]
+        
+        forces = -torch.autograd.grad(predicted_energies.sum(), coordinates, create_graph=True, retain_graph=True)[0]
+        abs_forces_ani = torch.sqrt(torch.sum(torch.pow(baseline_forces, 2), (0,2) ))
+        abs_forces_true = torch.sqrt(torch.sum(torch.pow(true_forces, 2), (0,2) ))
+        for jdx, k in enumerate(torch.sqrt(torch.sum(torch.pow(forces, 2), (0,2) ))):
+            #print(k.item()/num_atoms)
+            dct2[cnt] = k.item()*Hartree
+            dct6[cnt] = abs_forces_ani[jdx].item()
+            dct[cnt] = abs_forces_true[jdx].item()
+            cnt += 1
+        #print(predicted_energies, true_energies + shft * species.shape[1] )
+        force_mse_base += (mse(true_forces, Hartree * baseline_forces ).sum(dim=(1,2) ) / num_atoms).mean()
+        
+        force_mse += (mse(true_forces, Hartree * forces ).sum(dim=(1,2) ) / num_atoms).mean()
+        total_mse_base += mse_sum(Hartree * baseline_energies / num_atoms.item(), (true_energies + shft * species.shape[1])/num_atoms.item() ).item()
+        total_mse += mse_sum(Hartree * predicted_energies / num_atoms.item(), (true_energies + shft * species.shape[1])/num_atoms.item() ).item()
+        count += predicted_energies.shape[0]
+print('RMSE ENERGY (BASELINE | FINE-TUNED):', math.sqrt(total_mse_base/count) , '|',  math.sqrt(total_mse/count))
+print('RMSE FORCE (BASELINE | FINE-TUNED):', math.sqrt(force_mse_base/count) , '|'  , math.sqrt(force_mse/count))
 
-    #calculate energies with NN potential for the structures used with DFT
-    struktura = dft[i]
-    struktura.set_calculator(calculator)
-    ani2x_forces.append(struktura.get_forces())
 
-    #struktura.set_calculator(calculator_baseline)
-    #baseline_forces.append(struktura.get_forces())
 
-    #struktura.set_calculator(calculator_baseline)
-    #dftF = np.asarray(struktura.get_forces()).reshape(3,-1)
-    #np.concatenate(baseline_forces[0], dftF[0])
-    #np.concatenate(baseline_forces[1], dftF[1])
-    #np.concatenate(baseline_forces[2], dftF[2])
-    #for atoms, shifts in asft:
-    #    ani2x_energies[i] -= np.count_nonzero(dft[i].get_atomic_numbers()==atoms)*shifts/27.2144
-    #ani2x_energies[i]/=len(dft[i].get_atomic_numbers())
+forces_base = pd.DataFrame.from_dict(dct6, orient='index')
+forces_pred = pd.DataFrame.from_dict(dct, orient='index')
+forces_true = pd.DataFrame.from_dict(dct2, orient='index')
+forces_df = pd.concat([forces_pred, forces_true, forces_base], 1)
 
-#compare predictions of NN potential to DFT data
-print(len(dft_forces))
-rv = 0
-#rv_base  = 0
-for i in range(len(dft)):
-    #print(np.asarray(dft_forces[i]).shape, np.asarray(ani2x_forces[i]).shape  )
-    #print(len(dft_forces[i][0]))
-    rv += stats.linregress(dft_forces[i][0], ani2x_forces[i][0]).rvalue
-    #rv_base += stats.linregress(dft_forces[i][0], baseline_forces[i][0]).rvalue
-    plt.scatter(dft_forces[i], ani2x_forces[i], s = 5, alpha = 0.3)
-    #plt.scatter(dft_forces[i], baseline_forces[i])
-    #plt.plot([-0.0005,0.0005],[-0.005,0.005])
-    #plt.xlim(-2100, -2000)
-    #plt.ylim(-2200, -2000)   
-    #plt.savefig('unzoom_sile_' + str(i) + '.jpeg')
-print(rv/len(dft))
-#plt.xlim(-0.01, 0.01)
-#plt.ylim(-0.01, 0.01)      
-plt.grid()
-plt.savefig('sile_novo.png')
 
+
+engs_base = pd.DataFrame.from_dict(dct5, orient='index') 
+engs_pred = pd.DataFrame.from_dict(dct3, orient='index') 
+engs_true = pd.DataFrame.from_dict(dct4, orient='index') 
+engs_df = pd.concat([engs_pred, engs_true, engs_base], 1)
+#engs_df.sub(engs_df.mean(axis=1), axis=0)
+engs_df.columns = ['Fine tuned [eV]', 'DFT [eV]', 'ANI2x [eV]']
+forces_df.columns = ['Fine tuned [eV/$\AA$]', 'DFT [eV/$\AA$]', 'ANI2x [eV/$\AA$]']
+print('Energies correlation matrtix:')
+print(engs_df.corr())
+pd.set_option("display.max_rows", None, "display.max_columns", None)
+print('Forces correlation matrtix:')
+print(forces_df.corr())
+
+print(forces_df.describe())
+
+#print('PARAMETRI', mpl.rcParams.keys())
+font = {
+    'axes.titlesize' : 40,
+    'axes.labelsize' : 35,
+    'lines.linewidth' : 10, 
+    'lines.markersize' : 15,
+    'savefig.bbox': 'tight',
+    }
+
+with mpl.rc_context(font):
+    plt.rcParams.update(font)
+    sns.set(font_scale =  3.05, style = 'ticks', palette = 'dark', rc = font)
+    fig, axs = plt.subplots(ncols=2, nrows = 2, figsize = (30,30))
+    #scatter_kws={"color": "navy"}, line_kws={"lw" : 6, "color": "darkgray"}
+    sns.regplot(data = forces_df, x="Fine tuned [eV/$\AA$]", y="DFT [eV/$\AA$]", ci = None, scatter_kws={"color": "navy"}, line_kws={"lw" : 7, "color": "gray"},  ax = axs[0][1])
+    sns.regplot(data = forces_df, x="ANI2x [eV/$\AA$]", y="DFT [eV/$\AA$]", ci = None,scatter_kws={"color": "navy"}, line_kws={"lw" : 7, "color": "gray"},  ax = axs[0][0])
+    sns.regplot(data = engs_df, x="Fine tuned [eV]", y="DFT [eV]", ci = None,scatter_kws={"color": "navy"}, line_kws={"lw" : 7, "color": "gray"},  ax = axs[1][1])
+    sns.regplot(data = engs_df, x="ANI2x [eV]", y="DFT [eV]", ci = None,scatter_kws={"color": "navy"}, line_kws={"lw" : 7, "color": "gray"}, ax = axs[1][0])
+    axs[0][0].title.set_text('a)')
+    axs[0][1].title.set_text('b)')
+    axs[1][0].title.set_text('c)')
+    axs[1][1].title.set_text('d)')
+    fig.savefig("figures/test_forces_{}.png".format(FILE_VAR))
 
