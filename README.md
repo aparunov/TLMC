@@ -41,7 +41,7 @@ python3 train.py -n num
 
 model is saved at model/compiled_model_num.pt directory.
 
-### Hyperparamter selection
+### Hyperparameter selection
 
 python3 train.py --help
 
@@ -56,6 +56,10 @@ python3 test.py -n num
 ### Change model device to cpu
 
 python3 model2cpu.py -n num
+
+### Explorative data analysis
+
+python3 visualize_data.py -n num
 
 
 
