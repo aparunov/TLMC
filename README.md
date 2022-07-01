@@ -59,7 +59,7 @@ python3 model2cpu.py -n num
 
 ### Explorative data analysis
 
-python3 visualize_data.py -n num
+python3 data_visualisation.py -n num
 
 
 
