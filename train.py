@@ -24,7 +24,10 @@ parser.add_argument('-tl',
                     default = 0, 
                     required=False, 
                     help=
-                    'If set to 0 all layers are unfrozen and weights are taken from ANI2x model. If set to 1, top and bottom layer will be frozen. If set to 2 no transfer learning takes place and weight are drawn from the normal distribution')
+                    'If set to 0 all layers are unfrozen and weights are taken from ANI2x model. 
+                    If set to 1, top and bottom layer will be frozen. 
+                    If set to 2 no transfer learning takes place and weight are drawn from the normal distribution'
+                   )
 
 parser.add_argument('-b',
                     '--batch-size', 
