@@ -18,6 +18,7 @@ docker run  --gpus all   -ti --ipc=host  -v /PATH/TO/FOLDER:/app nvidia/cuda:11.
 ### Install pip 
 
 apt update 
+
 apt install python3-pip
 
 ### Install pytorch with CUDA support 
