@@ -168,7 +168,7 @@ for _ in range(AdamW_scheduler.last_epoch + 1, max_epochs):
     f = 0
     for i, properties in tqdm(enumerate(training.shuffle()),total=len(training), desc="epoch {}".format(AdamW_scheduler.last_epoch)):
         species = torch.unsqueeze(torch.as_tensor(properties['species']),0).to(device)
-        coordinates = properties['coordinates'].to(device).float().             requires_grad_(True)
+        coordinates = properties['coordinates'].to(device).float().requires_grad_(True)
         true_energies = properties['energies'].to(device).double()
         true_forces = properties['forces'].to(device).float()
         cell = properties['cell'].to(device).float()
